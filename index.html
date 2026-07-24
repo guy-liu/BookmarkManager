@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookmark Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        header h1 {
+            font-size: 28px;
+            color: #667eea;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: #667eea;
+            color: white;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        button.secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="url"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="url"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        .modal-buttons .cancel {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-buttons .cancel:hover {
+            background: #e0e0e0;
+        }
+
+        .groups-container {
+            display: grid;
+            gap: 30px;
+        }
+
+        .group {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .group.dragging-over {
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+            transform: scale(1.02);
+        }
+
+        .group-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+        }
+
+        .group-header.dragging {
+            opacity: 0.7;
+        }
+
+        .group-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .group-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .group-controls button {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .group-controls button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .group-content {
+            padding: 20px;
+        }
+
+        .bookmarks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--tile-size, 120px), 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .bookmark {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: move;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .bookmark:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .bookmark.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .bookmark-icon {
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            font-size: 20px;
+            overflow: hidden;
+        }
+
+        .bookmark-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            padding: 4px;
+        }
+
+        .bookmark-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bookmark-title {
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+
+        .bookmark-url {
+            font-size: 12px;
+            color: #999;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bookmark-actions {
+            display: flex;
+            gap: 6px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .bookmark:hover .bookmark-actions {
+            opacity: 1;
+        }
+
+        .bookmark-actions button {
+            padding: 4px 8px;
+            font-size: 12px;
+            background: #667eea;
+            border: none;
+        }
+
+        .bookmark-actions button.delete {
+            background: #e74c3c;
+        }
+
+        .bookmark-actions button.delete:hover {
+            background: #c0392b;
+        }
+
+        .add-bookmark-btn {
+            width: 100%;
+            padding: 15px;
+            background: #f0f0f0;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+
+        .add-bookmark-btn:hover {
+            background: #e8e8e8;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .add-group-btn {
+            width: 100%;
+            padding: 20px;
+            background: white;
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .add-group-btn:hover {
+            background: #f9f9f9;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .settings-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .setting-item label {
+            margin: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .bookmarks-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+        }
+
+        .icon-preview {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f0f0f0;
+            border-radius: 8px;
+            font-size: 32px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Bookmark Manager</h1>
+            <div class="header-buttons">
+                <button onclick="toggleSettings()">⚙️ Settings</button>
+                <button onclick="exportBookmarks()" class="secondary">⬇️ Export</button>
+                <button onclick="importBookmarks()" class="secondary">⬆️ Import</button>
+                <button onclick="openAddGroupModal()" class="secondary">➕ Group</button>
+            </div>
+        </header>
+
+        <div class="settings-panel" id="settingsPanel">
+            <h2 style="margin-bottom: 20px;">Settings</h2>
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="tileSize">Tile Size (px):</label>
+                    <input type="number" id="tileSize" min="80" max="200" value="120" onchange="updateSettings()">
+                </div>
+                <div class="setting-item">
+                    <label for="displayMode">Display Mode:</label>
+                    <select id="displayMode" onchange="updateSettings()">
+                        <option value="icon-left">Icon + Title</option>
+                        <option value="icon-top">Icon on Top</option>
+                        <option value="icon-only">Icon Only</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="columns">Columns per Group:</label>
+                    <input type="number" id="columns" min="1" max="10" value="auto" onchange="updateSettings()">
+                </div>
+                <div class="setting-item">
+                    <button onclick="resetAllData()" class="secondary" style="width: 100%; margin-top: 8px;">Reset All Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="groups-container" id="groupsContainer"></div>
+
+        <button class="add-group-btn" onclick="openAddGroupModal()">➕ Add New Group</button>
+    </div>
+
+    <!-- Add/Edit Bookmark Modal -->
+    <div class="modal" id="bookmarkModal">
+        <div class="modal-content">
+            <div class="modal-header">Add Bookmark</div>
+            <form onsubmit="saveBookmark(event)">
+                <div class="form-group">
+                    <label for="bookmarkTitle">Title *</label>
+                    <input type="text" id="bookmarkTitle" placeholder="e.g., Google" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookmarkUrl">URL *</label>
+                    <input type="url" id="bookmarkUrl" placeholder="e.g., https://google.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="bookmarkIcon">Icon (leave empty for auto-fetch)</label>
+                    <input type="text" id="bookmarkIcon" placeholder="e.g., emoji or URL">
+                    <div class="icon-preview" id="iconPreview"></div>
+                </div>
+                <div class="form-group">
+                    <label for="bookmarkGroup">Group *</label>
+                    <select id="bookmarkGroup" required></select>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeModal('bookmarkModal')">Cancel</button>
+                    <button type="submit">Save Bookmark</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Group Modal -->
+    <div class="modal" id="groupModal">
+        <div class="modal-content">
+            <div class="modal-header">Add Group</div>
+            <form onsubmit="saveGroup(event)">
+                <div class="form-group">
+                    <label for="groupName">Group Name *</label>
+                    <input type="text" id="groupName" placeholder="e.g., Work, Personal" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeModal('groupModal')">Cancel</button>
+                    <button type="submit">Create Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Group Modal -->
+    <div class="modal" id="editGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">Edit Group</div>
+            <form onsubmit="updateGroup(event)">
+                <div class="form-group">
+                    <label for="editGroupName">Group Name *</label>
+                    <input type="text" id="editGroupName" placeholder="Group name" required>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeModal('editGroupModal')">Cancel</button>
+                    <button type="submit">Update Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
