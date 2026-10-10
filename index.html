@@ -168,7 +168,15 @@
 
         .groups-container {
             display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 30px;
+            grid-auto-flow: dense;
+        }
+
+        .groups-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* reduced gap between groups for compactness */
         }
 
         .group {
@@ -209,14 +217,22 @@
             gap: 8px;
         }
 
-        .group-controls button {
-            padding: 6px 12px;
-            font-size: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+        .group-move-buttons {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
         }
 
-        .group-controls button:hover {
+        .group-move-buttons button {
+            padding: 6px 10px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            min-width: 32px;
+        }
+
+        .group-move-buttons button:hover {
             background: rgba(255, 255, 255, 0.3);
         }
 
@@ -225,22 +241,23 @@
         }
 
         .bookmarks-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(var(--tile-size, 120px), 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px; /* tighter spacing between bookmark tiles */
+            margin-bottom: 12px;
         }
 
         .bookmark {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 12px;
+            gap: 10px;
+            padding: 0 6px; /* no top/bottom gap between icon and tile border */
+            height: var(--tile-size, 120px);
             background: #f9f9f9;
             border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            border-radius: 6px;
             cursor: move;
-            transition: all 0.3s ease;
+            transition: all 0.18s ease;
             position: relative;
         }
 
@@ -256,23 +273,30 @@
         }
 
         .bookmark-icon {
-            width: 40px;
-            height: 40px;
-            min-width: 40px;
+            width: calc(var(--tile-size, 120px) - 24px);
+            height: calc(var(--tile-size, 120px) - 24px);
+            min-width: calc(var(--tile-size, 120px) - 24px);
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #f0f0f0;
-            font-size: 20px;
+            font-size: calc((var(--tile-size, 120px) - 24px) * 0.5);
             overflow: hidden;
+            margin: 0; /* remove internal icon gaps */
+        }
+
+        /* Compact mode: shorter tile without shrinking the icon itself */
+        .compact-tiles .bookmark {
+            height: calc(var(--tile-size, 120px) / 2);
+            padding: 0 6px;
         }
 
         .bookmark-icon img {
             width: 100%;
             height: 100%;
             object-fit: contain;
-            padding: 4px;
+            padding: 0; /* no internal image padding / border gap */
         }
 
         .bookmark-info {
@@ -286,15 +310,18 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 3px;
+            margin: 0; /* removed bottom margin to reduce vertical space */
+            padding: 0;
+            line-height: 1.1;
         }
 
         .bookmark-url {
-            font-size: 12px;
+            font-size: 11px;
             color: #999;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-top: 2px;
         }
 
         .bookmark-actions {
@@ -431,6 +458,55 @@
             font-size: 32px;
             margin: 10px 0;
         }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .import-preview {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .import-preview-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .import-preview-item:last-child {
+            border-bottom: none;
+        }
+
+        .import-preview-title {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .import-preview-url {
+            font-size: 11px;
+            color: #999;
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -439,6 +515,7 @@
             <h1>📚 Bookmark Manager</h1>
             <div class="header-buttons">
                 <button onclick="toggleSettings()">⚙️ Settings</button>
+                <button onclick="openBulkImportModal()" class="secondary">📋 Bulk Import</button>
                 <button onclick="exportBookmarks()" class="secondary">⬇️ Export</button>
                 <button onclick="importBookmarks()" class="secondary">⬆️ Import</button>
                 <button onclick="openAddGroupModal()" class="secondary">➕ Group</button>
@@ -463,6 +540,12 @@
                 <div class="setting-item">
                     <label for="columns">Columns per Group:</label>
                     <input type="number" id="columns" min="1" max="10" value="auto" onchange="updateSettings()">
+                </div>
+                <div class="setting-item">
+                    <label for="showUrlInTile" style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="showUrlInTile" onchange="updateSettings()">
+                        Show URL on each tile
+                    </label>
                 </div>
                 <div class="setting-item">
                     <button onclick="resetAllData()" class="secondary" style="width: 100%; margin-top: 8px;">Reset All Data</button>
@@ -534,6 +617,31 @@
                 <div class="modal-buttons">
                     <button type="button" class="cancel" onclick="closeModal('editGroupModal')">Cancel</button>
                     <button type="submit">Update Group</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div class="modal" id="bulkImportModal">
+        <div class="modal-content">
+            <div class="modal-header">Bulk Import Bookmarks</div>
+            <form onsubmit="bulkImportBookmarks(event)">
+                <div class="form-group">
+                    <label for="bulkImportGroup">Target Group *</label>
+                    <select id="bulkImportGroup" required></select>
+                </div>
+                <div class="form-group">
+                    <label for="bulkImportText">Paste Bookmark List *</label>
+                    <textarea id="bulkImportText" placeholder="Paste title and URL on alternate lines:&#10;Google&#10;https://google.com&#10;&#10;Facebook&#10;https://facebook.com" required></textarea>
+                    <div class="import-preview" id="importPreview" style="display: none;"></div>
+                </div>
+                <div style="font-size: 12px; color: #999; margin-top: 10px;">
+                    Format: Enter title on one line, URL on the next line. Blank lines are ignored.
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="cancel" onclick="closeModal('bulkImportModal')">Cancel</button>
+                    <button type="submit">Import Bookmarks</button>
                 </div>
             </form>
         </div>

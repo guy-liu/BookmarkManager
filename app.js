@@ -21,7 +21,8 @@ class BookmarkManager {
         const defaults = {
             tileSize: 120,
             displayMode: 'icon-left',
-            columns: 'auto'
+            columns: 'auto',
+            showUrlInTile: false
         };
         const saved = localStorage.getItem('bm-settings');
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
@@ -36,6 +37,14 @@ class BookmarkManager {
         document.getElementById('tileSize').value = this.settings.tileSize;
         document.getElementById('displayMode').value = this.settings.displayMode;
         document.getElementById('columns').value = this.settings.columns;
+        document.getElementById('showUrlInTile').checked = !!this.settings.showUrlInTile;
+
+        // Toggle compact mode class when URLs are hidden to reduce tile height
+        if (!this.settings.showUrlInTile) {
+            document.documentElement.classList.add('compact-tiles');
+        } else {
+            document.documentElement.classList.remove('compact-tiles');
+        }
     }
 
     loadData() {
@@ -52,7 +61,9 @@ class BookmarkManager {
             {
                 id: 'group-' + Date.now(),
                 name: 'Quick Links',
-                bookmarks: []
+                bookmarks: [],
+                column: 0,
+                row: 0
             }
         ];
         this.saveData();
@@ -159,10 +170,15 @@ class BookmarkManager {
     }
 
     addGroup(name) {
+        const maxCol = Math.max(0, ...this.groups.map(g => g.column || 0));
+        const maxRow = Math.max(0, ...this.groups.filter(g => (g.column || 0) === maxCol).map(g => g.row || 0));
+        
         const newGroup = {
             id: 'group-' + Date.now(),
             name: name,
-            bookmarks: []
+            bookmarks: [],
+            column: maxCol,
+            row: maxRow + 1
         };
         this.groups.push(newGroup);
         this.saveData();
@@ -186,6 +202,56 @@ class BookmarkManager {
             this.saveData();
             this.render();
         }
+    }
+
+    moveGroupUp(groupId) {
+        const group = this.getGroup(groupId);
+        if (!group || group.row === 0) return;
+
+        const sibling = this.groups.find(g => g.column === group.column && g.row === group.row - 1);
+        if (sibling) {
+            [group.row, sibling.row] = [sibling.row, group.row];
+            this.saveData();
+            this.render();
+        }
+    }
+
+    moveGroupDown(groupId) {
+        const group = this.getGroup(groupId);
+        if (!group) return;
+
+        const sibling = this.groups.find(g => g.column === group.column && g.row === group.row + 1);
+        if (sibling) {
+            [group.row, sibling.row] = [sibling.row, group.row];
+            this.saveData();
+            this.render();
+        }
+    }
+
+    moveGroupLeft(groupId) {
+        const group = this.getGroup(groupId);
+        if (!group || group.column === 0) return;
+
+        const targetColumn = group.column - 1;
+        const maxRowInTarget = Math.max(-1, ...this.groups.filter(g => g.column === targetColumn).map(g => g.row || 0));
+        
+        group.column = targetColumn;
+        group.row = maxRowInTarget + 1;
+        this.saveData();
+        this.render();
+    }
+
+    moveGroupRight(groupId) {
+        const group = this.getGroup(groupId);
+        if (!group) return;
+
+        const targetColumn = group.column + 1;
+        const maxRowInTarget = Math.max(-1, ...this.groups.filter(g => g.column === targetColumn).map(g => g.row || 0));
+        
+        group.column = targetColumn;
+        group.row = maxRowInTarget + 1;
+        this.saveData();
+        this.render();
     }
 
     addBookmark(title, url, icon, groupId) {
@@ -291,7 +357,35 @@ class BookmarkManager {
             return;
         }
 
-        container.innerHTML = this.groups.map(group => this.renderGroup(group)).join('');
+        // Ensure all groups have column and row properties
+        this.groups.forEach(group => {
+            if (group.column === undefined) group.column = 0;
+            if (group.row === undefined) group.row = 0;
+        });
+
+        // Group by columns
+        const columns = {};
+        this.groups.forEach(group => {
+            const col = group.column || 0;
+            if (!columns[col]) columns[col] = [];
+            columns[col].push(group);
+        });
+
+        // Sort each column by row
+        Object.keys(columns).forEach(col => {
+            columns[col].sort((a, b) => (a.row || 0) - (b.row || 0));
+        });
+
+        // Render columns
+        const html = Object.keys(columns)
+            .sort((a, b) => parseInt(a) - parseInt(b))
+            .map(col => {
+                const groupsInCol = columns[col];
+                return `<div class="groups-column">${groupsInCol.map(group => this.renderGroup(group)).join('')}</div>`;
+            })
+            .join('');
+
+        container.innerHTML = html;
     }
 
     renderGroup(group) {
@@ -304,13 +398,19 @@ class BookmarkManager {
                 <div class="group-header" draggable="true">
                     <span class="group-title">${this.escapeHtml(group.name)}</span>
                     <div class="group-controls">
-                        <button type="button" onclick="app.openEditGroupModal('${group.id}')" style="background: rgba(255,255,255,0.2);">✏️</button>
+                        <div class="group-move-buttons">
+                            <button type="button" title="Move Up" onclick="app.moveGroupUp('${group.id}')">⬆️</button>
+                            <button type="button" title="Move Down" onclick="app.moveGroupDown('${group.id}')">⬇️</button>
+                            <button type="button" title="Move Left" onclick="app.moveGroupLeft('${group.id}')">⬅️</button>
+                            <button type="button" title="Move Right" onclick="app.moveGroupRight('${group.id}')">➡️</button>
+                        </div>
+                        <button type="button" onclick="openEditGroupModal('${group.id}')" style="background: rgba(255,255,255,0.2);">✏️</button>
                         <button type="button" onclick="app.deleteGroup('${group.id}')" style="background: rgba(255,255,255,0.2);">🗑️</button>
                     </div>
                 </div>
                 <div class="group-content">
                     ${bookmarkHTML}
-                    <button type="button" class="add-bookmark-btn" onclick="app.openAddBookmarkModal('${group.id}')">+ Add Bookmark</button>
+                    <button type="button" class="add-bookmark-btn" onclick="openAddBookmarkModal('${group.id}')">+ Add Bookmark</button>
                 </div>
             </div>
         `;
@@ -323,6 +423,10 @@ class BookmarkManager {
                 : `<span>${bookmark.icon}</span>`)
             : '<span>🔗</span>';
 
+        const urlHtml = this.settings.showUrlInTile
+            ? `<div class="bookmark-url" title="${this.escapeHtml(bookmark.url)}">${this.getDomainFromUrl(bookmark.url)}</div>`
+            : '';
+
         return `
             <div class="bookmark" data-bookmark-id="${bookmark.id}" data-group-id="${groupId}" draggable="true">
                 <div class="bookmark-icon">
@@ -332,10 +436,10 @@ class BookmarkManager {
                     <a href="${this.escapeHtml(bookmark.url)}" target="_blank" rel="noopener noreferrer" class="bookmark-title" title="${this.escapeHtml(bookmark.title)}">
                         ${this.escapeHtml(bookmark.title)}
                     </a>
-                    <div class="bookmark-url" title="${this.escapeHtml(bookmark.url)}">${this.getDomainFromUrl(bookmark.url)}</div>
+                    ${urlHtml}
                 </div>
                 <div class="bookmark-actions">
-                    <button type="button" onclick="app.openEditBookmarkModal('${bookmark.id}', '${groupId}')">✏️</button>
+                    <button type="button" onclick="openEditBookmarkModal('${bookmark.id}', '${groupId}')">✏️</button>
                     <button type="button" class="delete" onclick="app.deleteBookmark('${bookmark.id}', '${groupId}')">🗑️</button>
                 </div>
             </div>
@@ -426,6 +530,22 @@ function openModal(modalId) {
     document.getElementById(modalId).classList.add('active');
 }
 
+function openAddGroupModal() {
+    if (app) app.openAddGroupModal();
+}
+
+function openEditGroupModal(groupId) {
+    if (app) app.openEditGroupModal(groupId);
+}
+
+function openAddBookmarkModal(groupId) {
+    if (app) app.openAddBookmarkModal(groupId);
+}
+
+function openEditBookmarkModal(bookmarkId, groupId) {
+    if (app) app.openEditBookmarkModal(bookmarkId, groupId);
+}
+
 function saveBookmark(e) {
     e.preventDefault();
     const title = document.getElementById('bookmarkTitle').value;
@@ -472,8 +592,10 @@ function updateSettings() {
     app.settings.tileSize = parseInt(document.getElementById('tileSize').value) || 120;
     app.settings.displayMode = document.getElementById('displayMode').value;
     app.settings.columns = document.getElementById('columns').value;
+    app.settings.showUrlInTile = document.getElementById('showUrlInTile').checked;
     app.saveSettings();
     app.applySettings();
+    app.render();
 }
 
 function exportBookmarks() {
@@ -502,6 +624,95 @@ function resetAllData() {
     }
 }
 
+function parseBulkImportText(text) {
+    // Split by lines and filter out empty lines
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    const entries = [];
+    for (let i = 0; i < lines.length; i += 2) {
+        if (i + 1 < lines.length) {
+            const title = lines[i];
+            const url = lines[i + 1];
+            
+            // Validate URL format
+            try {
+                new URL(url);
+                entries.push({ title, url });
+            } catch (e) {
+                // Skip invalid URLs
+                console.warn(`Invalid URL: ${url}`);
+            }
+        }
+    }
+    
+    return entries;
+}
+
+function openBulkImportModal() {
+    app.updateGroupSelect();
+    const groupSelect = document.getElementById('bulkImportGroup');
+    groupSelect.innerHTML = app.groups.map(g => `<option value="${g.id}">${app.escapeHtml(g.name)}</option>`).join('');
+    
+    document.getElementById('bulkImportText').value = '';
+    document.getElementById('importPreview').innerHTML = '';
+    document.getElementById('importPreview').style.display = 'none';
+    document.getElementById('bulkImportModal').classList.add('active');
+}
+
+function updateBulkImportPreview() {
+    const text = document.getElementById('bulkImportText').value;
+    if (!text.trim()) {
+        document.getElementById('importPreview').style.display = 'none';
+        return;
+    }
+    
+    const entries = parseBulkImportText(text);
+    const preview = document.getElementById('importPreview');
+    
+    if (entries.length === 0) {
+        preview.innerHTML = '<div style="color: #999;">No valid bookmarks found</div>';
+        preview.style.display = 'block';
+        return;
+    }
+    
+    preview.innerHTML = entries.map(entry => `
+        <div class="import-preview-item">
+            <div class="import-preview-title">${app.escapeHtml(entry.title)}</div>
+            <div class="import-preview-url">${app.escapeHtml(entry.url)}</div>
+        </div>
+    `).join('');
+    preview.style.display = 'block';
+}
+
+function bulkImportBookmarks(e) {
+    e.preventDefault();
+    
+    const text = document.getElementById('bulkImportText').value;
+    const groupId = document.getElementById('bulkImportGroup').value;
+    
+    const entries = parseBulkImportText(text);
+    
+    if (entries.length === 0) {
+        alert('No valid bookmarks found. Please check the format.');
+        return;
+    }
+    
+    const group = app.getGroup(groupId);
+    if (!group) {
+        alert('Group not found');
+        return;
+    }
+    
+    let addedCount = 0;
+    entries.forEach(entry => {
+        app.addBookmark(entry.title, entry.url, null, groupId);
+        addedCount++;
+    });
+    
+    alert(`Successfully imported ${addedCount} bookmark(s) to ${group.name}`);
+    closeModal('bulkImportModal');
+}
+
 // Update icon preview on input change
 document.addEventListener('DOMContentLoaded', () => {
     const iconInput = document.getElementById('bookmarkIcon');
@@ -509,5 +720,11 @@ document.addEventListener('DOMContentLoaded', () => {
         iconInput.addEventListener('input', (e) => {
             document.getElementById('iconPreview').textContent = e.target.value || '';
         });
+    }
+    
+    // Add event listener for bulk import text preview
+    const bulkImportText = document.getElementById('bulkImportText');
+    if (bulkImportText) {
+        bulkImportText.addEventListener('input', updateBulkImportPreview);
     }
 });
