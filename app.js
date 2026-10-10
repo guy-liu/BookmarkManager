@@ -85,7 +85,7 @@ class BookmarkManager {
     handleDragStart(e) {
         const bookmark = e.target.closest('[data-bookmark-id]');
         const group = e.target.closest('[data-group-id]');
-        
+
         if (bookmark) {
             this.draggedItem = {
                 type: 'bookmark',
@@ -93,36 +93,76 @@ class BookmarkManager {
                 groupId: group.dataset.groupId
             };
             bookmark.classList.add('dragging');
-        } else if (e.target.closest('.group-header')) {
-            const groupElement = e.target.closest('[data-group-id]');
+            if (e.dataTransfer) {
+                e.dataTransfer.setData('text/plain', JSON.stringify(this.draggedItem));
+            }
+            return;
+        }
+
+        if (group && group.classList.contains('group')) {
             this.draggedItem = {
                 type: 'group',
-                groupId: groupElement.dataset.groupId
+                groupId: group.dataset.groupId
             };
-            groupElement.querySelector('.group-header').classList.add('dragging');
+            group.classList.add('dragging');
+            if (e.dataTransfer) {
+                e.dataTransfer.setData('text/plain', JSON.stringify(this.draggedItem));
+            }
         }
     }
 
     handleDragOver(e) {
         e.preventDefault();
-        if (this.draggedItem) {
-            e.dataTransfer.dropEffect = 'move';
+        if (this.draggedItem && this.draggedItem.type === 'bookmark') {
+            const targetBookmark = e.target.closest('[data-bookmark-id]');
+            if (!targetBookmark) return;
+
+            const sourceBookmark = document.querySelector(`.bookmark[data-bookmark-id="${this.draggedItem.bookmarkId}"]`);
+            if (!sourceBookmark || sourceBookmark === targetBookmark) return;
+
+            const sourceGroupId = sourceBookmark.dataset.groupId;
+            const targetGroupId = targetBookmark.dataset.groupId;
+            if (sourceGroupId !== targetGroupId) return;
+
+            const container = sourceBookmark.parentNode;
+            const before = e.clientY < targetBookmark.getBoundingClientRect().top + targetBookmark.offsetHeight / 2;
+            container.insertBefore(sourceBookmark, before ? targetBookmark : targetBookmark.nextSibling);
+
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        } else if (this.draggedItem) {
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
         }
     }
 
     handleDragEnter(e) {
         if (!this.draggedItem) return;
-        
+
         const group = e.target.closest('[data-group-id]');
+        const column = e.target.closest('.groups-column');
+
         if (group && this.draggedItem.type === 'bookmark') {
             group.classList.add('dragging-over');
+        }
+
+        if (column && this.draggedItem.type === 'group') {
+            column.classList.add('dragging-over');
         }
     }
 
     handleDragLeave(e) {
         const group = e.target.closest('[data-group-id]');
+        const column = e.target.closest('.groups-column');
+
         if (group && !group.contains(e.relatedTarget)) {
             group.classList.remove('dragging-over');
+        }
+
+        if (column && !column.contains(e.relatedTarget)) {
+            column.classList.remove('dragging-over');
         }
     }
 
@@ -131,30 +171,59 @@ class BookmarkManager {
         if (!this.draggedItem) return;
 
         const targetGroup = e.target.closest('[data-group-id]');
+        const targetColumn = e.target.closest('.groups-column');
         const targetBookmark = e.target.closest('[data-bookmark-id]');
 
         if (this.draggedItem.type === 'bookmark' && targetGroup) {
             const sourceGroup = this.getGroup(this.draggedItem.groupId);
             const destGroup = this.getGroup(targetGroup.dataset.groupId);
-            
+
             if (sourceGroup && destGroup) {
-                const bookmark = sourceGroup.bookmarks.find(b => b.id === this.draggedItem.bookmarkId);
-                if (bookmark) {
-                    sourceGroup.bookmarks = sourceGroup.bookmarks.filter(b => b.id !== this.draggedItem.bookmarkId);
-                    destGroup.bookmarks.push(bookmark);
-                    this.saveData();
-                    this.render();
+                const sourceBookmark = document.querySelector(`.bookmark[data-bookmark-id="${this.draggedItem.bookmarkId}"]`);
+
+                if (sourceGroup.id === destGroup.id && sourceBookmark) {
+                    const orderedIds = Array.from(sourceBookmark.parentNode.querySelectorAll('.bookmark')).map(el => el.dataset.bookmarkId);
+                    const bookmarkMap = new Map(destGroup.bookmarks.map(bookmark => [bookmark.id, bookmark]));
+                    const sanitized = Array.from(new Map(destGroup.bookmarks.map(bookmark => [bookmark.id, bookmark])).values());
+                    const nextBookmarks = orderedIds
+                        .map(id => bookmarkMap.get(id))
+                        .filter(Boolean)
+                        .filter((bookmark, index, arr) => arr.findIndex(item => item.id === bookmark.id) === index);
+
+                    destGroup.bookmarks = nextBookmarks.length ? nextBookmarks : sanitized;
+                } else {
+                    const bookmark = sourceGroup.bookmarks.find(b => b.id === this.draggedItem.bookmarkId);
+                    if (bookmark) {
+                        sourceGroup.bookmarks = this.dedupeBookmarks(sourceGroup.bookmarks.filter(b => b.id !== this.draggedItem.bookmarkId));
+                        destGroup.bookmarks = this.dedupeBookmarks(destGroup.bookmarks);
+                        destGroup.bookmarks.push(bookmark);
+                    }
                 }
-            }
-        } else if (this.draggedItem.type === 'group' && targetGroup && targetGroup.dataset.groupId !== this.draggedItem.groupId) {
-            const sourceIndex = this.groups.findIndex(g => g.id === this.draggedItem.groupId);
-            const destIndex = this.groups.findIndex(g => g.id === targetGroup.dataset.groupId);
-            
-            if (sourceIndex !== -1 && destIndex !== -1) {
-                [this.groups[sourceIndex], this.groups[destIndex]] = [this.groups[destIndex], this.groups[sourceIndex]];
+
                 this.saveData();
                 this.render();
             }
+            return;
+        }
+
+        if (this.draggedItem.type === 'group') {
+            const sourceGroup = this.getGroup(this.draggedItem.groupId);
+            if (!sourceGroup) return;
+
+            const dropTargetGroup = targetGroup && targetGroup.dataset.groupId !== this.draggedItem.groupId ? this.getGroup(targetGroup.dataset.groupId) : null;
+            const container = e.target.closest('#groupsContainer');
+            let targetColumnIndex = sourceGroup.column || 0;
+
+            if (targetColumn) {
+                targetColumnIndex = parseInt(targetColumn.dataset.columnIndex, 10);
+            } else if (container && !dropTargetGroup) {
+                targetColumnIndex = this.groups.reduce((max, group) => Math.max(max, group.column || 0), -1) + 1;
+            } else if (dropTargetGroup) {
+                targetColumnIndex = dropTargetGroup.column || 0;
+            }
+
+            const targetBeforeId = dropTargetGroup ? dropTargetGroup.id : null;
+            this.moveGroupToColumn(this.draggedItem.groupId, targetColumnIndex, targetBeforeId, e.clientY, targetGroup, targetColumn);
         }
     }
 
@@ -162,7 +231,78 @@ class BookmarkManager {
         document.querySelectorAll('.dragging, .dragging-over').forEach(el => {
             el.classList.remove('dragging', 'dragging-over');
         });
+        document.querySelectorAll('.groups-column.dragging-over').forEach(el => {
+            el.classList.remove('dragging-over');
+        });
         this.draggedItem = null;
+    }
+
+    dedupeBookmarks(bookmarks) {
+        const seen = new Set();
+        return bookmarks.filter(bookmark => {
+            if (!bookmark || !bookmark.id || seen.has(bookmark.id)) {
+                return false;
+            }
+            seen.add(bookmark.id);
+            return true;
+        });
+    }
+
+    moveGroupToColumn(groupId, targetColumn, targetBeforeId, clientY, targetGroupElement, targetColumnElement) {
+        const sourceGroup = this.getGroup(groupId);
+        if (!sourceGroup) return;
+
+        const targetColumnValue = Number.isFinite(targetColumn) ? targetColumn : (sourceGroup.column || 0);
+        const otherGroups = this.groups.filter(g => g.id !== groupId);
+        const columnGroups = otherGroups.filter(g => (g.column || 0) === targetColumnValue);
+
+        let insertIndex = columnGroups.length;
+        if (targetBeforeId && targetBeforeId !== groupId) {
+            const beforeIndex = columnGroups.findIndex(g => g.id === targetBeforeId);
+            if (beforeIndex !== -1) {
+                insertIndex = beforeIndex;
+            }
+        } else if (targetGroupElement && targetColumnElement && clientY !== undefined) {
+            const rect = targetGroupElement.getBoundingClientRect();
+            if (clientY < rect.top + rect.height / 2) {
+                insertIndex = 0;
+            }
+        }
+
+        const groupsByColumn = {};
+        const columnKeys = [...new Set(otherGroups.map(g => g.column || 0).concat([targetColumnValue]))].sort((a, b) => a - b);
+
+        for (const column of columnKeys) {
+            let columnItems = otherGroups.filter(g => (g.column || 0) === column);
+            if (column === targetColumnValue) {
+                if (targetBeforeId && targetBeforeId !== groupId) {
+                    const beforeIndex = columnItems.findIndex(g => g.id === targetBeforeId);
+                    if (beforeIndex !== -1) {
+                        columnItems.splice(beforeIndex, 0, sourceGroup);
+                    } else {
+                        columnItems.push(sourceGroup);
+                    }
+                } else {
+                    columnItems.push(sourceGroup);
+                }
+            }
+            groupsByColumn[column] = columnItems;
+        }
+
+        for (const column of columnKeys) {
+            const columnItems = groupsByColumn[column] || [];
+            columnItems.forEach((group, index) => {
+                group.column = column;
+                group.row = index;
+            });
+        }
+
+        // Ensure the source group is always positioned in the target column even when the target column is empty
+        sourceGroup.column = targetColumnValue;
+        sourceGroup.row = (groupsByColumn[targetColumnValue] || []).findIndex(g => g.id === groupId);
+
+        this.saveData();
+        this.render();
     }
 
     getGroup(groupId) {
@@ -381,7 +521,7 @@ class BookmarkManager {
             .sort((a, b) => parseInt(a) - parseInt(b))
             .map(col => {
                 const groupsInCol = columns[col];
-                return `<div class="groups-column">${groupsInCol.map(group => this.renderGroup(group)).join('')}</div>`;
+                return `<div class="groups-column" data-column-index="${col}" aria-label="Column ${parseInt(col) + 1}">${groupsInCol.map(group => this.renderGroup(group)).join('')}</div>`;
             })
             .join('');
 
@@ -394,8 +534,8 @@ class BookmarkManager {
             : `<div class="bookmarks-grid">${group.bookmarks.map(bookmark => this.renderBookmark(bookmark, group.id)).join('')}</div>`;
 
         return `
-            <div class="group" data-group-id="${group.id}" draggable="false">
-                <div class="group-header" draggable="true">
+            <div class="group" data-group-id="${group.id}" draggable="true">
+                <div class="group-header" draggable="false">
                     <span class="group-title">${this.escapeHtml(group.name)}</span>
                     <div class="group-controls">
                         <div class="group-move-buttons">
