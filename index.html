@@ -351,6 +351,10 @@
             overflow: hidden;
         }
 
+        body.layout-locked .bookmark {
+            cursor: default;
+        }
+
         .bookmark:hover {
             background: var(--panel-muted);
             border-color: var(--header-accent);
@@ -430,10 +434,18 @@
             gap: 6px;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
 
         .bookmark:hover .bookmark-actions {
             opacity: 1;
+            pointer-events: auto;
+        }
+
+        body.layout-locked .bookmark-actions,
+        body.layout-locked .bookmark:hover .bookmark-actions {
+            opacity: 0;
+            pointer-events: none;
         }
 
         .bookmark-actions button {
@@ -626,6 +638,7 @@
             <h1>📚 Bookmark Manager</h1>
             <div class="header-buttons">
                 <button onclick="toggleSettings()">⚙️ Settings</button>
+                <button id="lockButton" onclick="toggleLock()" class="secondary" title="Click to lock">🔓</button>
                 <button onclick="openBulkImportModal()" class="secondary">📋 Bulk Import</button>
                 <button onclick="exportBookmarks()" class="secondary">⬇️ Export</button>
                 <button onclick="importBookmarks()" class="secondary">⬆️ Import</button>

@@ -23,7 +23,8 @@ class BookmarkManager {
             displayMode: 'icon-left',
             columns: 'auto',
             showUrlInTile: false,
-            theme: 'indigo'
+            theme: 'indigo',
+            locked: false
         };
         const saved = localStorage.getItem('bm-settings');
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
@@ -31,6 +32,17 @@ class BookmarkManager {
 
     saveSettings() {
         localStorage.setItem('bm-settings', JSON.stringify(this.settings));
+    }
+
+    updateLockButton() {
+        const lockButton = document.getElementById('lockButton');
+        if (!lockButton) return;
+
+        const locked = !!this.settings.locked;
+        lockButton.textContent = locked ? '🔒' : '🔓';
+        lockButton.title = locked ? 'Click to unlock' : 'Click to lock';
+        lockButton.setAttribute('aria-label', locked ? 'Locked layout' : 'Unlocked layout');
+        lockButton.dataset.locked = String(locked);
     }
 
     applySettings() {
@@ -41,6 +53,8 @@ class BookmarkManager {
         document.getElementById('showUrlInTile').checked = !!this.settings.showUrlInTile;
         document.getElementById('themeSelect').value = this.settings.theme || 'indigo';
 
+        this.updateLockButton();
+        document.body.classList.toggle('layout-locked', !!this.settings.locked);
         this.applyTheme();
 
         if (!this.settings.showUrlInTile) {
@@ -138,6 +152,11 @@ class BookmarkManager {
     }
 
     handleDragStart(e) {
+        if (this.settings.locked) {
+            e.preventDefault();
+            return;
+        }
+
         const bookmark = e.target.closest('[data-bookmark-id]');
         const group = e.target.closest('[data-group-id]');
 
@@ -167,6 +186,10 @@ class BookmarkManager {
     }
 
     handleDragOver(e) {
+        if (this.settings.locked) {
+            return;
+        }
+
         e.preventDefault();
         if (this.draggedItem && this.draggedItem.type === 'bookmark') {
             const targetBookmark = e.target.closest('[data-bookmark-id]');
@@ -400,6 +423,7 @@ class BookmarkManager {
     }
 
     moveGroupUp(groupId) {
+        if (this.settings.locked) return;
         const group = this.getGroup(groupId);
         if (!group || group.row === 0) return;
 
@@ -412,6 +436,7 @@ class BookmarkManager {
     }
 
     moveGroupDown(groupId) {
+        if (this.settings.locked) return;
         const group = this.getGroup(groupId);
         if (!group) return;
 
@@ -424,6 +449,7 @@ class BookmarkManager {
     }
 
     moveGroupLeft(groupId) {
+        if (this.settings.locked) return;
         const group = this.getGroup(groupId);
         if (!group || group.column === 0) return;
 
@@ -437,6 +463,7 @@ class BookmarkManager {
     }
 
     moveGroupRight(groupId) {
+        if (this.settings.locked) return;
         const group = this.getGroup(groupId);
         if (!group) return;
 
@@ -589,7 +616,7 @@ class BookmarkManager {
             : `<div class="bookmarks-grid">${group.bookmarks.map(bookmark => this.renderBookmark(bookmark, group.id)).join('')}</div>`;
 
         return `
-            <div class="group" data-group-id="${group.id}" draggable="true">
+            <div class="group" data-group-id="${group.id}" draggable="${this.settings.locked ? 'false' : 'true'}">
                 <div class="group-header" draggable="false">
                     <span class="group-title">${this.escapeHtml(group.name)}</span>
                     <div class="group-controls">
@@ -623,7 +650,7 @@ class BookmarkManager {
             : '';
 
         return `
-            <div class="bookmark" data-bookmark-id="${bookmark.id}" data-group-id="${groupId}" draggable="true">
+            <div class="bookmark" data-bookmark-id="${bookmark.id}" data-group-id="${groupId}" draggable="${this.settings.locked ? 'false' : 'true'}">
                 <div class="bookmark-icon">
                     ${iconHtml}
                 </div>
@@ -781,6 +808,14 @@ function updateGroup(e) {
 
 function toggleSettings() {
     document.getElementById('settingsPanel').classList.toggle('active');
+}
+
+function toggleLock() {
+    app.settings.locked = !app.settings.locked;
+    app.saveSettings();
+    app.updateLockButton();
+    document.body.classList.toggle('layout-locked', !!app.settings.locked);
+    app.render();
 }
 
 function updateSettings() {
