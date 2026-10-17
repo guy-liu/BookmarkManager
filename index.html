@@ -11,12 +11,50 @@
             box-sizing: border-box;
         }
 
+        :root {
+            --bg-1: #667eea;
+            --bg-2: #764ba2;
+            --panel-bg: #ffffff;
+            --panel-alt: #f9f9f9;
+            --panel-muted: #f0f0f0;
+            --text: #333333;
+            --text-muted: #666666;
+            --border: #e0e0e0;
+            --tile-bg: #f9f9f9;
+            --tile-border: #e0e0e0;
+            --header-accent: #667eea;
+            --button-primary: #667eea;
+            --button-primary-hover: #5568d3;
+            --button-secondary: #f0f0f0;
+            --button-secondary-hover: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+
+        :root[data-theme="dark"] {
+            --bg-1: #0f172a;
+            --bg-2: #1e293b;
+            --panel-bg: #111827;
+            --panel-alt: #1f2937;
+            --panel-muted: #374151;
+            --text: #e5e7eb;
+            --text-muted: #cbd5e1;
+            --border: #374151;
+            --tile-bg: #111827;
+            --tile-border: #374151;
+            --header-accent: #8b5cf6;
+            --button-primary: #8b5cf6;
+            --button-primary-hover: #7c3aed;
+            --button-secondary: #374151;
+            --button-secondary-hover: #4b5563;
+            --shadow: rgba(0, 0, 0, 0.45);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 100%);
             min-height: 100vh;
             padding: 8px 20px 20px 20px;
-            color: #333;
+            color: var(--text);
         }
 
         .container {
@@ -25,11 +63,11 @@
         }
 
         header {
-            background: white;
+            background: var(--panel-bg);
             border-radius: 12px;
             padding: 8px 12px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -39,7 +77,7 @@
 
         header h1 {
             font-size: 14px;
-            color: #667eea;
+            color: var(--header-accent);
             line-height: 1;
             margin: 0;
             padding: 0;
@@ -60,13 +98,13 @@
             font-size: 13px;
             font-weight: 500;
             transition: all 0.3s ease;
-            background: #667eea;
+            background: var(--button-primary);
             color: white;
             line-height: 1.2;
         }
 
         button:hover {
-            background: #5568d3;
+            background: var(--button-primary-hover);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
@@ -76,12 +114,12 @@
         }
 
         button.secondary {
-            background: #f0f0f0;
-            color: #333;
+            background: var(--button-secondary);
+            color: var(--text);
         }
 
         button.secondary:hover {
-            background: #e0e0e0;
+            background: var(--button-secondary-hover);
         }
 
         .modal {
@@ -102,7 +140,7 @@
         }
 
         .modal-content {
-            background: white;
+            background: var(--panel-bg);
             border-radius: 12px;
             padding: 30px;
             max-width: 500px;
@@ -116,7 +154,7 @@
             font-size: 24px;
             font-weight: 600;
             margin-bottom: 20px;
-            color: #333;
+            color: var(--text);
         }
 
         .form-group {
@@ -133,21 +171,25 @@
         input[type="text"],
         input[type="url"],
         input[type="number"],
-        select {
+        select,
+        textarea {
             width: 100%;
             padding: 10px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid var(--border);
             border-radius: 8px;
             font-size: 14px;
             transition: border-color 0.3s ease;
+            background: var(--panel-alt);
+            color: var(--text);
         }
 
         input[type="text"]:focus,
         input[type="url"]:focus,
         input[type="number"]:focus,
-        select:focus {
+        select:focus,
+        textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--header-accent);
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
@@ -163,12 +205,12 @@
         }
 
         .modal-buttons .cancel {
-            background: #f0f0f0;
-            color: #333;
+            background: var(--button-secondary);
+            color: var(--text);
         }
 
         .modal-buttons .cancel:hover {
-            background: #e0e0e0;
+            background: var(--button-secondary-hover);
         }
 
         .groups-container {
@@ -195,10 +237,10 @@
         }
 
         .group {
-            background: white;
+            background: var(--panel-bg);
             border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow);
             transition: all 0.3s ease;
         }
 
@@ -213,9 +255,9 @@
         }
 
         .group-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--header-accent) 0%, var(--bg-2) 100%);
             color: white;
-            padding: 8px 12px; /* reduced header padding */
+            padding: 8px 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -248,18 +290,37 @@
             flex-wrap: wrap;
         }
 
-        .group-move-buttons button {
+        .group-move-buttons button,
+        .small-action-btn {
             padding: 3px 6px;
             font-size: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: white;
             min-width: 26px;
             line-height: 1;
         }
 
+        .group-move-buttons button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white;
+        }
+
         .group-move-buttons button:hover {
             background: rgba(255, 255, 255, 0.3);
+        }
+
+        .small-action-btn {
+            background: var(--button-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .small-action-btn:hover {
+            background: var(--button-primary-hover);
         }
 
         .group-content {
@@ -274,22 +335,24 @@
         }
 
         .bookmark {
+            box-sizing: border-box;
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 0 6px; /* no top/bottom gap between icon and tile border */
+            padding: 0 6px;
             height: var(--tile-size, 120px);
-            background: #f9f9f9;
-            border: 2px solid #e0e0e0;
+            background: var(--tile-bg);
+            border: 2px solid var(--tile-border);
             border-radius: 6px;
             cursor: move;
             transition: all 0.18s ease;
             position: relative;
+            overflow: hidden;
         }
 
         .bookmark:hover {
-            background: #f0f0f0;
-            border-color: #667eea;
+            background: var(--panel-muted);
+            border-color: var(--header-accent);
             box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
         }
 
@@ -299,30 +362,41 @@
         }
 
         .bookmark-icon {
-            width: calc(var(--tile-size, 120px) - 24px);
-            height: calc(var(--tile-size, 120px) - 24px);
-            min-width: calc(var(--tile-size, 120px) - 24px);
+            --bookmark-icon-size: min(calc(var(--tile-size, 120px) * 0.44), calc(var(--tile-size, 120px) - 20px));
+            box-sizing: border-box;
+            width: var(--bookmark-icon-size);
+            height: var(--bookmark-icon-size);
+            min-width: var(--bookmark-icon-size);
+            min-height: var(--bookmark-icon-size);
             border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f0f0f0;
-            font-size: calc((var(--tile-size, 120px) - 24px) * 0.5);
+            background: var(--panel-muted);
             overflow: hidden;
-            margin: 0; /* remove internal icon gaps */
+            margin: 0;
+            padding: 0;
+            flex-shrink: 0;
+        }
+
+        .bookmark-icon > span,
+        .bookmark-icon > img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+            font-size: calc(var(--bookmark-icon-size) * 0.52);
         }
 
         /* Compact mode: shorter tile without shrinking the icon itself */
         .compact-tiles .bookmark {
             height: calc(var(--tile-size, 120px) / 2);
             padding: 0 6px;
-        }
-
-        .bookmark-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            padding: 0; /* no internal image padding / border gap */
         }
 
         .bookmark-info {
@@ -332,18 +406,18 @@
 
         .bookmark-title {
             font-weight: 500;
-            color: #333;
+            color: var(--text);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin: 0; /* removed bottom margin to reduce vertical space */
+            margin: 0;
             padding: 0;
             line-height: 1.1;
         }
 
         .bookmark-url {
             font-size: 11px;
-            color: #999;
+            color: var(--text-muted);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -377,48 +451,58 @@
         }
 
         .add-bookmark-btn {
-            width: 100%;
-            padding: 15px;
-            background: #f0f0f0;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #666;
-            transition: all 0.3s ease;
-        }
+                    box-sizing: border-box;
+                    width: 100%;
+                    height: var(--tile-size, 120px);
+                    padding: 0 6px;
+                    background: var(--tile-bg);
+                    border: 2px dashed var(--tile-border);
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    color: var(--text-muted);
+                    transition: all 0.3s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                }
 
-        .add-bookmark-btn:hover {
-            background: #e8e8e8;
-            border-color: #667eea;
-            color: #667eea;
-        }
+                .compact-tiles .add-bookmark-btn {
+                    height: calc(var(--tile-size, 120px) / 2);
+                }
+
+                .add-bookmark-btn:hover {
+                    background: var(--panel-alt);
+                    border-color: var(--header-accent);
+                    color: var(--header-accent);
+                }
 
         .add-group-btn {
             width: 100%;
             padding: 20px;
-            background: white;
-            border: 2px dashed #ccc;
+            background: var(--panel-bg);
+            border: 2px dashed var(--border);
             border-radius: 12px;
             cursor: pointer;
             font-size: 16px;
-            color: #666;
+            color: var(--text-muted);
             transition: all 0.3s ease;
             margin-top: 20px;
         }
 
         .add-group-btn:hover {
-            background: #f9f9f9;
-            border-color: #667eea;
-            color: #667eea;
+            background: var(--panel-alt);
+            border-color: var(--header-accent);
+            color: var(--header-accent);
         }
 
         .settings-panel {
-            background: white;
+            background: var(--panel-bg);
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow);
             display: none;
         }
 
@@ -445,7 +529,7 @@
         .empty-state {
             text-align: center;
             padding: 40px 20px;
-            color: #999;
+            color: var(--text-muted);
         }
 
         .empty-state-icon {
@@ -479,7 +563,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #f0f0f0;
+            background: var(--panel-muted);
             border-radius: 8px;
             font-size: 32px;
             margin: 10px 0;
@@ -504,8 +588,8 @@
         }
 
         .import-preview {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
+            background: var(--panel-alt);
+            border: 1px solid var(--border);
             border-radius: 8px;
             padding: 12px;
             margin-top: 12px;
@@ -516,7 +600,7 @@
 
         .import-preview-item {
             padding: 6px 0;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid var(--border);
         }
 
         .import-preview-item:last-child {
@@ -525,12 +609,12 @@
 
         .import-preview-title {
             font-weight: 500;
-            color: #333;
+            color: var(--text);
         }
 
         .import-preview-url {
             font-size: 11px;
-            color: #999;
+            color: var(--text-muted);
             word-break: break-all;
         }
     </style>
@@ -572,6 +656,14 @@
                         <input type="checkbox" id="showUrlInTile" onchange="updateSettings()">
                         Show URL on each tile
                     </label>
+                </div>
+                <div class="setting-item">
+                    <label for="themeSelect">Theme:</label>
+                    <select id="themeSelect" onchange="updateSettings()">
+                        <option value="system">Follow system</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
                 </div>
                 <div class="setting-item">
                     <button onclick="resetAllData()" class="secondary" style="width: 100%; margin-top: 8px;">Reset All Data</button>

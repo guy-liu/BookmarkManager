@@ -22,7 +22,8 @@ class BookmarkManager {
             tileSize: 120,
             displayMode: 'icon-left',
             columns: 'auto',
-            showUrlInTile: false
+            showUrlInTile: false,
+            theme: 'system'
         };
         const saved = localStorage.getItem('bm-settings');
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
@@ -38,13 +39,23 @@ class BookmarkManager {
         document.getElementById('displayMode').value = this.settings.displayMode;
         document.getElementById('columns').value = this.settings.columns;
         document.getElementById('showUrlInTile').checked = !!this.settings.showUrlInTile;
+        document.getElementById('themeSelect').value = this.settings.theme || 'system';
 
-        // Toggle compact mode class when URLs are hidden to reduce tile height
+        this.applyTheme();
+
         if (!this.settings.showUrlInTile) {
             document.documentElement.classList.add('compact-tiles');
         } else {
             document.documentElement.classList.remove('compact-tiles');
         }
+    }
+
+    applyTheme() {
+        const theme = this.settings.theme || 'system';
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+
+        document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
     }
 
     loadData() {
@@ -733,6 +744,7 @@ function updateSettings() {
     app.settings.displayMode = document.getElementById('displayMode').value;
     app.settings.columns = document.getElementById('columns').value;
     app.settings.showUrlInTile = document.getElementById('showUrlInTile').checked;
+    app.settings.theme = document.getElementById('themeSelect').value;
     app.saveSettings();
     app.applySettings();
     app.render();
