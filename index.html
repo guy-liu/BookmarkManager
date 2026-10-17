@@ -255,8 +255,8 @@
         }
 
         .group-header {
-            background: linear-gradient(135deg, var(--header-accent) 0%, var(--bg-2) 100%);
-            color: white;
+            background: linear-gradient(135deg, var(--header-accent) 0%, var(--header-accent-2) 100%);
+            color: var(--header-text, #ffffff);
             padding: 8px 12px;
             display: flex;
             justify-content: space-between;
@@ -264,6 +264,7 @@
             cursor: move;
             user-select: none;
             min-height: 36px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.18);
         }
 
         .group-header.dragging {
@@ -660,9 +661,14 @@
                 <div class="setting-item">
                     <label for="themeSelect">Theme:</label>
                     <select id="themeSelect" onchange="updateSettings()">
-                        <option value="system">Follow system</option>
-                        <option value="light">Light</option>
-                        <option value="dark">Dark</option>
+                        <option value="indigo">Indigo</option>
+                        <option value="sunset">Sunset</option>
+                        <option value="ocean">Ocean</option>
+                        <option value="forest">Forest</option>
+                        <option value="plum">Plum</option>
+                        <option value="coral">Coral</option>
+                        <option value="slate">Slate</option>
+                        <option value="emerald">Emerald</option>
                     </select>
                 </div>
                 <div class="setting-item">

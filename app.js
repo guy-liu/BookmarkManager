@@ -23,7 +23,7 @@ class BookmarkManager {
             displayMode: 'icon-left',
             columns: 'auto',
             showUrlInTile: false,
-            theme: 'system'
+            theme: 'indigo'
         };
         const saved = localStorage.getItem('bm-settings');
         return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
@@ -39,7 +39,7 @@ class BookmarkManager {
         document.getElementById('displayMode').value = this.settings.displayMode;
         document.getElementById('columns').value = this.settings.columns;
         document.getElementById('showUrlInTile').checked = !!this.settings.showUrlInTile;
-        document.getElementById('themeSelect').value = this.settings.theme || 'system';
+        document.getElementById('themeSelect').value = this.settings.theme || 'indigo';
 
         this.applyTheme();
 
@@ -51,11 +51,55 @@ class BookmarkManager {
     }
 
     applyTheme() {
-        const theme = this.settings.theme || 'system';
-        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+        const themeKey = this.settings.theme || 'indigo';
+        const themeMap = {
+            indigo: {
+                bg1: '#6366f1', bg2: '#7c3aed', header: '#4338ca', headerAlt: '#5b4ae8', headerText: '#ffffff', button: '#4f46e5', buttonHover: '#4338ca', panelBg: '#f9f7ff', panelAlt: '#efeaff', panelMuted: '#e5dcff', text: '#2e2440', textMuted: '#60507c', border: '#d9cff8', tileBg: '#ffffff', tileBorder: '#d9cff8', shadow: 'rgba(67, 56, 202, 0.14)'
+            },
+            sunset: {
+                bg1: '#f97316', bg2: '#fb7185', header: '#d9485f', headerAlt: '#c2410c', headerText: '#fff7ed', button: '#e11d48', buttonHover: '#be123c', panelBg: '#fff8f3', panelAlt: '#ffe8dd', panelMuted: '#ffd3c1', text: '#4a2c23', textMuted: '#7a4a3f', border: '#f6c4b3', tileBg: '#fffdfb', tileBorder: '#f5d0be', shadow: 'rgba(217, 73, 95, 0.12)'
+            },
+            ocean: {
+                bg1: '#0ea5e9', bg2: '#14b8a6', header: '#0f766e', headerAlt: '#0b4f78', headerText: '#ecfeff', button: '#0f766e', buttonHover: '#0b5b58', panelBg: '#effcff', panelAlt: '#dff9ff', panelMuted: '#d1f2ff', text: '#123246', textMuted: '#49657d', border: '#afd8ea', tileBg: '#f9feff', tileBorder: '#cfeaf8', shadow: 'rgba(8, 145, 178, 0.14)'
+            },
+            forest: {
+                bg1: '#22c55e', bg2: '#0f766e', header: '#166534', headerAlt: '#14532d', headerText: '#f0fdf4', button: '#166534', buttonHover: '#14532d', panelBg: '#f2fbf4', panelAlt: '#e0f5e8', panelMuted: '#cfeedd', text: '#1c2d25', textMuted: '#45675d', border: '#bfdcc5', tileBg: '#fbfffc', tileBorder: '#d1ebdd', shadow: 'rgba(22, 101, 52, 0.14)'
+            },
+            plum: {
+                bg1: '#a855f7', bg2: '#ec4899', header: '#7c3aed', headerAlt: '#5b21b6', headerText: '#f5f3ff', button: '#8b5cf6', buttonHover: '#7c3aed', panelBg: '#faf7ff', panelAlt: '#f0e7ff', panelMuted: '#e6d8ff', text: '#2d1b3d', textMuted: '#644b7d', border: '#d9c3f3', tileBg: '#fffdfd', tileBorder: '#ddc8f5', shadow: 'rgba(124, 58, 237, 0.14)'
+            },
+            coral: {
+                bg1: '#ff7a59', bg2: '#ffbf69', header: '#e53935', headerAlt: '#b91c1c', headerText: '#fff7ed', button: '#ef4444', buttonHover: '#dc2626', panelBg: '#fffaf6', panelAlt: '#ffe7dd', panelMuted: '#ffd5c2', text: '#3a2632', textMuted: '#6c5156', border: '#f0c0b4', tileBg: '#fffdfb', tileBorder: '#f7d4c7', shadow: 'rgba(229, 57, 53, 0.12)'
+            },
+            slate: {
+                bg1: '#475569', bg2: '#64748b', header: '#334155', headerAlt: '#1e293b', headerText: '#f8fafc', button: '#475569', buttonHover: '#334155', panelBg: '#f9fafb', panelAlt: '#edf2f7', panelMuted: '#e2e8f0', text: '#1f2937', textMuted: '#4b5563', border: '#d0d7e1', tileBg: '#ffffff', tileBorder: '#dfe6ee', shadow: 'rgba(30, 41, 59, 0.14)'
+            },
+            emerald: {
+                bg1: '#10b981', bg2: '#14b8a6', header: '#047857', headerAlt: '#065f46', headerText: '#ecfdf5', button: '#047857', buttonHover: '#065f46', panelBg: '#f3fff9', panelAlt: '#e0f5ed', panelMuted: '#cdeee1', text: '#123d31', textMuted: '#476b60', border: '#b7ddd0', tileBg: '#ffffff', tileBorder: '#cfeae0', shadow: 'rgba(5, 150, 105, 0.14)'
+            }
+        };
 
-        document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+        const palette = themeMap[themeKey] || themeMap.indigo;
+
+        document.documentElement.style.setProperty('--bg-1', palette.bg1);
+        document.documentElement.style.setProperty('--bg-2', palette.bg2);
+        document.documentElement.style.setProperty('--panel-bg', palette.panelBg);
+        document.documentElement.style.setProperty('--panel-alt', palette.panelAlt);
+        document.documentElement.style.setProperty('--panel-muted', palette.panelMuted);
+        document.documentElement.style.setProperty('--text', palette.text);
+        document.documentElement.style.setProperty('--text-muted', palette.textMuted);
+        document.documentElement.style.setProperty('--border', palette.border);
+        document.documentElement.style.setProperty('--tile-bg', palette.tileBg);
+        document.documentElement.style.setProperty('--tile-border', palette.tileBorder);
+        document.documentElement.style.setProperty('--header-accent', palette.header);
+        document.documentElement.style.setProperty('--header-accent-2', palette.headerAlt);
+        document.documentElement.style.setProperty('--header-text', palette.headerText);
+        document.documentElement.style.setProperty('--button-primary', palette.button);
+        document.documentElement.style.setProperty('--button-primary-hover', palette.buttonHover);
+        document.documentElement.style.setProperty('--button-secondary', palette.panelMuted);
+        document.documentElement.style.setProperty('--button-secondary-hover', palette.border);
+        document.documentElement.style.setProperty('--shadow', palette.shadow);
+        document.documentElement.dataset.theme = 'custom';
     }
 
     loadData() {
@@ -744,7 +788,7 @@ function updateSettings() {
     app.settings.displayMode = document.getElementById('displayMode').value;
     app.settings.columns = document.getElementById('columns').value;
     app.settings.showUrlInTile = document.getElementById('showUrlInTile').checked;
-    app.settings.theme = document.getElementById('themeSelect').value;
+    app.settings.theme = document.getElementById('themeSelect').value || 'indigo';
     app.saveSettings();
     app.applySettings();
     app.render();
